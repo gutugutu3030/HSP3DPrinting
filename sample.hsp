@@ -1,7 +1,10 @@
 #include "printer.hsp"
 
-startPrinting
+startPrinting 4
 repeat 5
-	printBoxf 50,50,80,80
+	printCircle 30,20,50,50,1
+loop
+repeat 5
+	printBoxf 40,30,60,60,1
 loop
 endPrinting

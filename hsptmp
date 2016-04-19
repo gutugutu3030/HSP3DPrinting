@@ -1,6 +1,6 @@
 #include "printer.hsp"
 
-startPrinting
+startPrinting 4
 repeat 5
 	printBoxf 50,50,80,80
 loop
