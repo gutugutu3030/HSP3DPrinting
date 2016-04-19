@@ -1,0 +1,218 @@
+#include "hspext.as"
+
+goto *mainmainPrinter
+
+#module
+
+#deffunc startPrinting int comNum1
+	comNum=4
+	if(comNum1!=0){
+		comNum=comNum1
+	}
+	drawScale=4
+	screen@ 0,150*drawScale,150*drawScale 
+	comopen@ comNum,"baud=250000 parity=N data=8 stop=1"
+	wait 300
+	sdim stack,10000;スタック
+	index=0;スタックの深さ
+	printerStack=0;プリンタ側に溜まってる命令数
+	extrude=0.03326013504
+	extruder=0.0
+	do
+		comget@ d,1
+	until stat=0
+	comput@ "G28\n"
+	wait 10
+	do
+		comget@ d,1
+		wait 1
+	until d=10
+	
+	comput@ "G1 Z10\n"
+	do
+		comget@ d,1
+		wait 1
+	until d=10
+	mes "Z10"
+	wait 10
+	comput@ "M109 S200\n"
+	do
+		mojisu=0
+		do
+			comget@ d,1
+			if d!=""{
+				mojisu=mojisu+1
+			}
+			wait 1
+		until d=10
+	until mojisu<6
+	z=0.0
+return
+
+
+#deffunc rectStroke double x1, double y1, double x2, double y2
+	str1="G1 X"+x1+" Y"+y1+" Z"+z+"\n"
+	send(str1)
+	extruder=extruder+(absf(y2-y1)*extrude)
+	str1="G0 X"+x1+" Y"+y2+" Z"+z+" E"+extruder+"\n"
+	send(str1)
+	extruder=extruder+(absf(x2-x1)*extrude)
+	str1="G0 X"+x2+" Y"+y2+" Z"+z+" E"+extruder+"\n"
+	send(str1)
+	extruder=extruder+(absf(y1-y2)*extrude)
+	str1="G0 X"+x2+" Y"+y1+" Z"+z+" E"+extruder+"\n"
+	send(str1)
+	extruder=extruder+(absf(x1-x2)*extrude)
+	str1="G0 X"+x1+" Y"+y1+" Z"+z+" E"+extruder+"\n"
+	send(str1)	
+return
+
+
+#deffunc printBoxf double x1, double y1, double x2, double y2, int isfill
+	if isfill=0{
+		rectStroke x1,y1,x2,y2
+		line x1*drawScale,y1*drawScale,x1*drawScale,y2*drawScale
+		line x1*drawScale,y2*drawScale,x2*drawScale,y2*drawScale
+		line x2*drawScale,y2*drawScale,x2*drawScale,y1*drawScale
+		line x2*drawScale,y1*drawScale,x1*drawScale,y1*drawScale
+		z+=0.2
+		return
+	}
+	xx1=0.0+x1
+	yy1=0.0+y1
+	xx2=0.0+x2
+	yy2=0.0+y2
+	if xx2<xx1{
+		intTmp=xx2
+		xx2=xx1
+		xx1=intTmp
+	}
+	if yy2<yy1{
+		intTmp=yy2
+		yy2=yy1
+		yy1=intTmp
+	}
+	
+	repeat
+		rectStroke xx1,yy1,xx2,yy2
+		xx1=xx1+0.4
+		yy1=yy1+0.4
+		xx2=xx2-0.4
+		yy2=yy2-0.4
+		if(xx2-xx1<0.4){
+			break
+		}
+		if(yy2-yy1<0.4){
+			break
+		}
+	loop
+	boxf x1,y1,x2,y2
+	z+=0.2
+return
+
+#deffunc ellipseStroke  double x1, double y1, double x2, double y2 
+	cx=(x1+x2)/2.0
+	cy=(y1+y2)/2.0
+	xr=0.0+absf(x1-cx)
+	yr=0.0+absf(y1-cy)
+	res=int((absf(x1-x2)+absf(y1-y2)))
+	if(res<1){
+		return
+	}
+	send("G1 X"+(cx+sin(-2.0*M_PI/res)*xr)+" Y"+(cy+cos(-2.0*M_PI/res)*yr)+" Z"+z+"\n")
+	exTmp=0.0
+	exxTmp=(sin(0)-sin(2.0*M_PI/res))*xr
+	exyTmp=(cos(0)-cos(2.0*M_PI/res))*yr
+	exTmp=exxTmp*exxTmp+exyTmp*exyTmp
+	exTmp=sqrt(exTmp)*extrude
+	
+	repeat res
+		extruder=extruder+exTmp
+		str1="G0 X"+(cx+sin(2.0*M_PI/res*cnt)*xr)+" Y"+(cy+cos(2.0*M_PI/res*cnt)*yr)+" Z"+z+" E"+extruder+"\n"
+		send(str1)
+	loop
+return
+
+#deffunc printCircle double x1, double y1, double x2, double y2, int isfill
+	xx1=0.0+x1
+	yy1=0.0+y1
+	xx2=0.0+x2
+	yy2=0.0+y2
+	if isfill=0{
+		ellipseStroke xx1,yy1,xx2,yy2
+		circle x1,y1,x2,y2
+		z+=0.2
+		return
+	}
+	if xx2<xx1{
+		intTmp=xx2
+		xx2=xx1
+		xx1=intTmp
+	}
+	if yy2<yy1{
+		intTmp=yy2
+		yy2=yy1
+		yy1=intTmp
+	}
+	repeat
+		ellipseStroke xx1,yy1,xx2,yy2
+		xx1=xx1+0.4
+		yy1=yy1+0.4
+		xx2=xx2-0.4
+		yy2=yy2-0.4
+		if(xx2-xx1<0.4){
+			break
+		}
+		if(yy2-yy1<0.4){
+			break
+		}
+	loop
+	circle x1,y1,x2,y2,1
+	z+=0.2
+return
+
+
+
+#deffunc endPrinting
+	z=z+10
+	if 140<z{
+		z=140
+	}
+	send("G1 Z"+z+"\n")
+	send("M104 S0\n")
+	send("M84\n")
+return
+
+#deffunc send str sendStr
+	stackPush(sendStr)
+	while index>0
+		to3dprinter=stackPop()
+		comput@ to3dprinter
+		wait 1
+		printerStack=printerStack+1
+		;受信を待つ
+		do
+			do
+				comget@ d,1
+				if d=10 {
+					printerStack=printerStack-1
+				}
+			until stat=0
+			wait 1
+		until printerStack<3
+	wend
+return
+
+
+
+#deffunc stackPush str stackPushStr
+	index=index+1
+	stack(index)=stackPushStr
+	return
+	
+	#defcfunc stackPop
+	str1=stack(index)
+	index=index-1
+return str1
+#global
+*mainmainPrinter
