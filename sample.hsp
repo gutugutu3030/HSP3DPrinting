@@ -1,10 +1,10 @@
 #include "printer.hsp"
 
-startPrinting 4
+startPrinting 4 ;COMポート番号を引数に書いてください　この命令が呼び出された瞬間に3Dプリンタが暑くなりだすので注意してください
 repeat 5
 	printCircle 30,20,50,50,1
 loop
 repeat 5
 	printBoxf 40,30,60,60,1
 loop
-endPrinting
+endPrinting ;これがないと3Dプリンタが熱いままになってしまいます 
